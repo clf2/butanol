@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biobutanol Separation Simulator - ISPR Methods</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); padding: 20px; line-height: 1.6; }
+
+    .container { max-width: 1200px; margin: 0 auto; }
+    
+    header { text-align: center; margin-bottom: 25px; }
+    header h1 { font-size: 2rem; color: var(--accent-blue); margin-bottom: 8px; }
+    header p { color: var(--text-muted); font-size: 0.95rem; }
+
+    /* Nav Tabs */
+    .tabs { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
+    .tab-btn {
+      background-color: var(--card-bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .tab-btn:hover { background-color: #2e3d52; color: #fff; }
+    .tab-btn.active {
+      background-color: var(--accent-blue);
+      color: #000;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Main Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+    }
+    .card h2 { font-size: 1.25rem; color: var(--accent-blue); margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+
+    /* Controls & Sliders */
+    .control-group { margin-bottom: 15px; }
+    .control-group label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+    .control-group label span { color: var(--accent-amber); font-weight: bold; }
+    input[type=range] { width: 100%; accent-color: var(--accent-blue); cursor: pointer; }
+
+    /* Flow Schematic Canvas */
+    .schematic-box {
+      width: 100%;
+      height: 280px;
+      background-color: #090d16;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      border: 1px dashed var(--border-color);
+    }
+
+    /* Calc Display */
+    .calc-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    .metric {
+      background: #090d16;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent-blue);
+    }
+    .metric-title { font-size: 0.8rem; color: var(--text-muted); }
+    .metric-value { font-size: 1.2rem; font-weight: bold; color: var(--accent-green); margin-top: 2px; }
+
+    /* Table Styles */
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.88rem; }
+    th, td { padding: 10px 12px; text-align: left; border: 1px solid var(--border-color); }
+    th { background-color: #090d16; color: var(--accent-blue); }
+    tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+
+    /* Process Flow Diagram Items */
+    .node {
+      position: absolute;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #fff;
+    }
+    .node-fermenter { top: 70px; left: 30px; width: 90px; height: 130px; background: #1e3a8a; border: 2px solid #3b82f6; border-radius: 20px 20px 8px 8px; }
+    .node-unit { top: 70px; left: 180px; width: 110px; height: 130px; background: #065f46; border: 2px solid #10b981; }
+    .node-condenser { top: 20px; left: 330px; width: 80px; height: 60px; background: #7c2d12; border: 2px solid #f97316; }
+    .node-separator { top: 140px; left: 330px; width: 80px; height: 80px; background: #581c87; border: 2px solid #a855f7; }
+
+    /* SVG Lines */
+    svg.canvas { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Biobutanol Separation Simulator</h1>
+    <p>Compare In-Situ Product Recovery (ISPR) Technologies for Biobutanol Fermentation</p>
+  </header>
+
+  <!-- Method Selection -->
+  <div class="tabs">
+    <button class="tab-btn active" id="btn-pervap" onclick="selectMethod('pervaporation')">1. Pervaporation (5/5 ⭐)</button>
+    <button class="tab-btn" id="btn-strip" onclick="selectMethod('stripping')">2. Gas Stripping (4/5 ⭐)</button>
+    <button class="tab-btn" id="btn-gevo" onclick="selectMethod('gevo')">3. Gevo GIFT® Technology (GIFT)</button>
+  </div>
+
+  <div class="grid">
+    <!-- Interactive Parameters & Calculations -->
+    <div class="card">
+      <h2>1. Live Operating Controls</h2>
+      
+      <div class="control-group">
+        <label>Fermenter Temperature: <span id="temp-val">35</span> °C</label>
+        <input type="range" id="temp-slider" min="30" max="45" value="35" oninput="updateCalculations()">
+      </div>
+
+      <div class="control-group">
+        <label>Broth Isobutanol Conc: <span id="conc-val">1.5</span> % (w/v)</label>
+        <input type="range" id="conc-slider" min="0.5" max="3.0" step="0.1" value="1.5" oninput="updateCalculations()">
+      </div>
+
+      <div class="control-group" id="pressure-group">
+        <label>Vacuum System Pressure: <span id="press-val">0.05</span> bar</label>
+        <input type="range" id="press-slider" min="0.01" max="1.0" step="0.01" value="0.05" oninput="updateCalculations()">
+      </div>
+
+      <h2>2. Thermodynamic Outputs</h2>
+      <div class="calc-metrics">
+        <div class="metric">
+          <div class="metric-title">Isobutanol Sat. Pressure (P<sub>sat</sub>)</div>
+          <div class="metric-value" id="psat-out">0.024 bar</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Enriched Vapor Conc.</div>
+          <div class="metric-value" id="vapor-conc-out">~28.5 %</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Enrichment Factor</div>
+          <div class="metric-value" id="enrichment-out">19.0x</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Microorganism Safety Status</div>
+          <div class="metric-value" style="color:var(--accent-green)">✅ 100% Safe</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Process Visualizer Box -->
+    <div class="card">
+      <h2>3. Interactive Process Flow Schematic</h2>
+      <div class="schematic-box" id="schematic">
+        <svg class="canvas" id="svg-canvas">
+          <path d="M 120 100 L 180 100" stroke="#38bdf8" stroke-width="3" fill="none" />
+          <path d="M 230 70 L 230 50 L 330 50" stroke="#f59e0b" stroke-dasharray="4" stroke-width="3" fill="none" />
+          <path d="M 370 80 L 370 140" stroke="#38bdf8" stroke-width="3" fill="none" />
+          <path d="M 230 180 L 230 220 L 75 220 L 75 200" stroke="#22c55e" stroke-width="2" fill="none" />
+        </svg>
+
+        <div class="node node-fermenter">Fermenter<br><br><span style="font-size:0.65rem; color:#93c5fd;">Broth + Yeast</span></div>
+        <div class="node node-unit" id="unit-node">Pervaporation Membrane</div>
+        <div class="node node-condenser">Condenser</div>
+        <div class="node node-separator">Phase Separator</div>
+      </div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-top:10px;" id="method-desc">
+        <strong>Mechanism:</strong> Hydrophobic membrane selectively absorbs organic solvent. Low vacuum pressure on the permeate side causes instant evaporation.
+      </p>
+    </div>
+  </div>
+
+  <!-- Detailed Method Comparison Table -->
+  <div class="card" style="margin-top:20px;">
+    <h2>4. Comprehensive Technology Comparison Matrix</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Feature / Parameter</th>
+          <th>1. Pervaporation</th>
+          <th>2. Gas Stripping</th>
+          <th>3. Gevo GIFT® Technology</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Driving Force</strong></td>
+          <td>Membrane Affinity + Vacuum pressure</td>
+          <td>Vapor-Liquid Equilibrium via Carrier Gas (N₂/CO₂)</td>
+          <td>Low-Pressure Flash Evaporation</td>
+        </tr>
+        <tr>
+          <td><strong>Operating Temp.</strong></td>
+          <td>30 – 40 °C</td>
+          <td>30 – 35 °C</td>
+          <td>30 – 35 °C</td>
+        </tr>
+        <tr>
+          <td><strong>Enrichment Factor</strong></td>
+          <td>High (~15x - 28x)</td>
+          <td>Moderate (~5x - 10x)</td>
+          <td>Very High (~20x)</td>
+        </tr>
+        <tr>
+          <td><strong>Yeast / Biomass Loss</strong></td>
+          <td>Zero (Retained in fermenter)</td>
+          <td>Zero (Retained in fermenter)</td>
+          <td>Zero (Retained in fermenter)</td>
+        </tr>
+        <tr>
+          <td><strong>Major Limitation</strong></td>
+          <td>Membrane Bio-fouling & High Capital Cost</td>
+          <td>Low Selectivity (Requires 2nd stage distillation)</td>
+          <td>Vacuum Seal System Complexity</td>
+        </tr>
+        <tr>
+          <td><strong>Industrial Status</strong></td>
+          <td>Pilot / Commercial promising</td>
+          <td>Commercial Pilot Plants</td>
+          <td>Commercial Scale (Gevo Plant)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let currentMethod = 'pervaporation';
+
+  const methodDetails = {
+    pervaporation: {
+      name: "Pervaporation Membrane",
+      desc: "<strong>Mechanism:</strong> Hydrophobic PDMS membrane selectively absorbs organic solvent. Lowering vacuum pressure increases permeate vapor driving force.",
+      showVacuum: true,
+      defaultPressure: 0.05
+    },
+    stripping: {
+      name: "Gas Stripping Column",
+      desc: "<strong>Mechanism:</strong> Inert gas (N2 or CO2) is sparged through broth. Volatile Isobutanol transfers into gas phase and travels to condenser loop.",
+      showVacuum: false,
+      defaultPressure: 1.0
+    },
+    gevo: {
+      name: "GIFT® Flash Vessel",
+      desc: "<strong>Mechanism:</strong> Low-pressure flash evaporation. Reduced system pressure lowers Isobutanol boiling point, flashing off ~20x enriched vapors at ~35°C.",
+      showVacuum: true,
+      defaultPressure: 0.05
+    }
+  };
+
+  function selectMethod(method) {
+    currentMethod = method;
+
+    // Reset tab styles
+    document.getElementById('btn-pervap').classList.remove('active');
+    document.getElementById('btn-strip').classList.remove('active');
+    document.getElementById('btn-gevo').classList.remove('active');
+
+    if(method === 'pervaporation') document.getElementById('btn-pervap').classList.add('active');
+    if(method === 'stripping') document.getElementById('btn-strip').classList.add('active');
+    if(method === 'gevo') document.getElementById('btn-gevo').classList.add('active');
+
+    document.getElementById('unit-node').innerText = methodDetails[method].name;
+    document.getElementById('method-desc').innerHTML = methodDetails[method].desc;
+
+    const pressGroup = document.getElementById('pressure-group');
+    if(methodDetails[method].showVacuum) {
+      pressGroup.style.display = 'block';
+      document.getElementById('press-slider').value = methodDetails[method].defaultPressure;
+    } else {
+      pressGroup.style.display = 'none';
+      document.getElementById('press-slider').value = 1.0;
+    }
+
+    updateCalculations();
+  }
+
+  function calculateAntoinePsat(tempC) {
+    const T = tempC;
+    const logP = 4.71 - (1380 / (T + 196.2));
+    return Math.pow(10, logP);
+  }
+
+  function updateCalculations() {
+    const temp = parseFloat(document.getElementById('temp-slider').value) || 35;
+    const conc = parseFloat(document.getElementById('conc-slider').value) || 1.5;
+    let press = parseFloat(document.getElementById('press-slider').value) || 0.05;
+
+    document.getElementById('temp-val').innerText = temp;
+    document.getElementById('conc-val').innerText = conc;
+    document.getElementById('press-val').innerText = press;
+
+    // Saturation vapor pressure calculation
+    const psat = calculateAntoinePsat(temp);
+    document.getElementById('psat-out').innerText = psat.toFixed(3) + " bar";
+
+    let enrichment = 6.5;
+
+    if(currentMethod === 'pervaporation') {
+      enrichment = (psat / (press + 0.001)) * 12.0 + (temp / 35) * 5;
+      if (enrichment > 28.0) enrichment = 28.0;
+      if (enrichment < 5.0) enrichment = 5.0;
+    } else if(currentMethod === 'gevo') {
+      enrichment = 20.0 * (0.05 / (press || 0.05));
+      if (enrichment > 30.0) enrichment = 30.0;
+      if (enrichment < 4.0) enrichment = 4.0;
+    } else if(currentMethod === 'stripping') {
+      // Gas Stripping Enrichment calculation based on temperature
+      enrichment = 5.0 + (temp - 30) * 0.25;
+    }
+
+    let vaporConc = conc * enrichment;
+    if (vaporConc > 85.0) vaporConc = 85.0;
+
+    document.getElementById('enrichment-out').innerText = enrichment.toFixed(1) + "x";
+    document.getElementById('vapor-conc-out').innerText = "~" + vaporConc.toFixed(1) + " %";
+  }
+
+  // Initialize page on load
+  updateCalculations();
+</script>
+
+</body>
+</html>
